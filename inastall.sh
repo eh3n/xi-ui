@@ -102,6 +102,7 @@ config_after_install() {
      the fi
 }
 
+
 install_x-ui() {
      systemctl stop x-ui
      cd /usr/local/
@@ -148,3 +149,75 @@ install_x-ui() {
      #echo -e ""
      #echo -e "If updating the panel, access the panel as you did before"
      #echo -e ""
+     
+     install_x-ui() {
+     systemctl stop x-ui
+     cd /usr/local/
+
+     if [ $# == 0 ]; then
+         last_version=$(curl -Ls "https://api.github.com/repos/vaxilu/x-ui/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([ ^"]+)".*/\1/')
+         if [[ ! -n "$last_version" ]]; then
+             echo -e "${red} failed to detect the x-ui version, it may be beyond the Github API limit, please try again later, or manually specify the x-ui version to install ${plain}"
+             exit 1
+         the fi
+         echo -e "Detected the latest version of x-ui: ${last_version}, start the installation"
+         wget -N --no-check-certificate -O /usr/local/x-ui-linux-${arch}.tar.gz https://github.com/vaxilu/x-ui/releases/download/$ {last_version}/x-ui-linux-${arch}.tar.gz
+         if [[ $? -ne 0 ]]; then
+             echo -e "${red} failed to download x-ui, please make sure your server can download Github files ${plain}"
+             exit 1
+         the fi
+     else
+         last_version=$1
+         url="https://github.com/vaxilu/x-ui/releases/download/${last_version}/x-ui-linux-${arch}.tar.gz"
+         echo -e "start installing x-ui v$1"
+         wget -N --no-check-certificate -O /usr/local/x-ui-linux-${arch}.tar.gz ${url}
+         if [[ $? -ne 0 ]]; then
+             echo -e "${red} failed to download x-ui v$1, please make sure ${plain} exists for this version"
+             exit 1
+         the fi
+     the fi
+
+     if [[ -e /usr/local/x-ui/ ]]; then
+         rm /usr/local/x-ui/ -rf
+     the fi
+
+     tar zxvf x-ui-linux-${arch}.tar.gz
+     rm x-ui-linux-${arch}.tar.gz -f
+     cd x-ui
+     chmod +x x-ui bin/xray-linux-${arch}
+     cp -f x-ui.service /etc/systemd/system/
+     wget --no-check-certificate -O /usr/bin/x-ui https://raw.githubusercontent.com/vaxilu/x-ui/main/x-ui.sh
+     chmod +x /usr/local/x-ui/x-ui.sh
+     chmod +x /usr/bin/x-ui
+     config_after_install
+     #echo -e "If it is a new installation, the default web port is ${green}54321${plain}, and the default username and password are ${green}admin${plain}"
+     #echo -e "Please ensure that this port is not occupied by other programs, ${yellow} and ensure that port 54321 has been released ${plain}"
+     # echo -e "If you want to modify 54321 to another port, enter the x-ui command to modify, and also make sure that the port you modified is also allowed"
+     #echo -e ""
+     #echo -e "If updating the panel, access the panel as you did before"
+     #echo -e ""
+     systemctl daemon-reload
+     systemctl enable x-ui
+     systemctl start x-ui
+     echo -e "${green}x-ui v${last_version}${plain} installed, panel started,"
+     echo -e ""
+     echo -e "How to use x-ui management script: "
+     echo -e "---------------------------------------------- "
+     echo -e "x-ui - show admin menu (more features)"
+     echo -e "x-ui start - start x-ui panel"
+     echo -e "x-ui stop - stop x-ui panel"
+     echo -e "x-ui restart - restart x-ui panel"
+     echo -e "x-ui status - view x-ui status"
+     echo -e "x-ui enable - set x-ui to boot automatically"
+     echo -e "x-ui disable - cancel x-ui boot automatically"
+     echo -e "x-ui log - view x-ui log"
+     echo -e "x-ui v2-ui - migrate the v2-ui account data of this machine to x-ui"
+     echo -e "x-ui update - update x-ui panel"
+     echo -e "x-ui install - install x-ui panel"
+     echo -e "x-ui uninstall - uninstall x-ui panel"
+     echo -e "---------------------------------------------- "
+}
+
+echo -e "${green} starts installing ${plain}"
+install_base
+install_x-ui $1
